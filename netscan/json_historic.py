@@ -51,9 +51,7 @@ def update_historic(file_name,data):
         json_data[i]["VENDOR"] = data["VENDOR"]
       if json_data[i]["ROUTER"] != data["ROUTER"]:
         json_data[i]["ROUTER"] = data["ROUTER"]
-      if json_data[i]["FSCAN_DATE"] != data["FSCAN_DATE"]:
-        json_data[i]["FSCAN_DATE"] = data["FSCAN_DATE"]
-      
+        
       f.seek(0)
       f.write(json.dumps(json_data,indent=4))
       f.truncate()
