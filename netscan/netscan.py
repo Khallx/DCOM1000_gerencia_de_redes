@@ -19,7 +19,6 @@ import argparse
 
 # dependencies: 
 # package iproute2 (linux) for ip 
-# package net-tools (linux) for arp
 
 # filters a list of string removing whitespace and empty strings
 def filter_strings(string_list):
@@ -86,14 +85,13 @@ class NetworkScanner:
     # network_addr must include subnet mask in the x.x.x.x/m format
     # when argument is default, ip is used to retrieve the subnet mask
     # scan period defines the time between network scans in (unit of time)
-    def __init__(self, network_addr=""):
-        if(network_addr==""):
+    def __init__(self, network_addr=None):
+        if(network_addr==None):
             # head -1 used to ensure only a single ip address is retrieved
             network_addr = filter_string(os.popen("ip -o -f inet addr show"
                                                 "| awk \'/scope global/ {print $4}\' "
                                                 "| head -1").read())
         try:
-            print(network_addr)
             # get the base network address based on local ip and mask (x.x.x.x/m)
             # strict false makes the constructor calculate the base network ip
             self.network_addr = ipaddress.ip_network(network_addr, strict=False)
@@ -112,7 +110,8 @@ class NetworkScanner:
     # does a continuos network scan periodically
     # scan_period = number of seconds between each scan
     def periodic_scan(self, scan_period=30):
-        print("Performing periodic network device scan every "+str(scan_period)+" seconds")
+        print("Performing periodic network device scan on "+str(self.network_addr)+
+            " every "+str(scan_period)+" seconds")
         # continuosly scan 
         while True:
             self.single_scan()
@@ -191,8 +190,8 @@ class NetworkScanner:
     def get_mac_by_arp(self, ip):
         # get only the first device, since multiple interfaces might be connected
         # to the same device.
-        mac = filter_string(str(os.popen("arp -n "+str(ip)+" | awk \'{print $3}\' "
-                                          "| tail -n +2 | head -1").read()))
+        mac = filter_string(str(os.popen("ip neigh show "+str(ip)+" | awk \'{print $5}\' "
+                                          "| head -1").read()))
         if mac == "":
             raise ValueError("Could not find MAC addr for IP: "+str(ip)+" via ARP")
         return mac
@@ -312,9 +311,32 @@ class NetworkScanner:
             print("-"*30)
 
 
+def get_args():
+    def bigger_than_zero(string):
+        value = int(string)
+        if value < 1:
+            raise argparse.ArgumentTypeError("Period must be an integer bigger than zero")
+        return value
+
+    parser = argparse.ArgumentParser(description="A periodic scan script.")
+    parser.add_argument("-p", dest="period", 
+            help="Determines the time between each scan in seconds",
+            default=10,
+            type=bigger_than_zero, # check if int is positive
+            required=False
+            )
+    parser.add_argument("-n", dest="net_addr", 
+            help="The network ip and subnet mask in the format X.X.X.X/M",
+            type=ipaddress.ip_network,
+            required=False
+            )
+
+    return parser.parse_args()
+
 def main():
-    ns = NetworkScanner("192.168.0.103/24")
-    ns.periodic_scan(10)
+    cmd_args = get_args()
+    ns = NetworkScanner(cmd_args.net_addr)
+    ns.periodic_scan(cmd_args.period)
 
 if __name__ == "__main__":
     main()
