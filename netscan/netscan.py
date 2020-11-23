@@ -75,7 +75,7 @@ class NetworkDevice:
         self.print()
 
     def print(self):
-        print("Device at IP: %s\tMAC: %s" % (self.ip,self.mac))
+        print("Device at IP: %s\tMAC: %s" % (str(self.ip),self.mac))
         print("Vendor: " + self.vendor)
         print("state: ", "UP" if self.UP else "DOWN")
         #print("Router" if self.router else "Host")
@@ -89,15 +89,18 @@ class NetworkScanner:
     def __init__(self, network_addr=""):
         if(network_addr==""):
             # head -1 used to ensure only a single ip address is retrieved
-           network_addr = filter_string(str(os.popen("ip route | grep \"src $MAINIP\""
-                                    "| awk '{print $1}' | head -1").read()))
-
+            network_addr = filter_string(os.popen("ip -o -f inet addr show"
+                                                "| awk \'/scope global/ {print $4}\' "
+                                                "| head -1").read())
         try:
-            self.network_addr = ipaddress.ip_network(network_addr)
+            print(network_addr)
+            # get the base network address based on local ip and mask (x.x.x.x/m)
+            # strict false makes the constructor calculate the base network ip
+            self.network_addr = ipaddress.ip_network(network_addr, strict=False)
         except ValueError:
             print("Invalid network address. Check your internet connection")
             exit()
-        
+
         # TODO: open JSON file and read already scanned devices
         self.scanned_devices = [] # list contains history of every device ever scanned
         self.current_scanned_devices = [] # list of current scanned devices
@@ -177,10 +180,10 @@ class NetworkScanner:
         # Join all
         for p in pool: p.join()
 
-        # convert queue to list for easier use later
+        # convert queue to list and convert to ipaddess.ip_address
         pinged_ips = []
         while not results.empty():
-            pinged_ips.append(results.get())
+            pinged_ips.append(ipaddress.ip_address(results.get()))
 
         return pinged_ips
 
@@ -188,19 +191,23 @@ class NetworkScanner:
     def get_mac_by_arp(self, ip):
         # get only the first device, since multiple interfaces might be connected
         # to the same device.
-        mac = filter_string(str(os.popen("arp -n "+ip+" | awk \'{print $3}\' "
-                                            "| tail -n +2 | head -1").read()))
+        mac = filter_string(str(os.popen("arp -n "+str(ip)+" | awk \'{print $3}\' "
+                                          "| tail -n +2 | head -1").read()))
+        if mac == "":
+            raise ValueError("Could not find MAC addr for IP: "+str(ip)+" via ARP")
         return mac
     
     # local mac adddr cannot be resolved via arp
     def get_local_mac(self, ip):
         # get the interface associated with the ip
-        grep_ip = ip + "/" # this is necessary for grep
+        grep_ip = str(ip) + "/" # this is necessary for grep
         ip_interface = filter_string(str(os.popen("ip addr show" 
                                         "| grep "+grep_ip+" | awk \'{print $NF}\'").read()))
         # get interface mac
         mac = filter_string(str(os.popen("ip link show "+ip_interface+""
                                         "| awk \'{print $2}\' | tail -n +2").read()))
+        if mac == "":
+            raise ValueError("Could not find MAC addr for local IP: "+str(ip) + " via ip link")
         return mac
 
     # returns a dictionary with mac as keys and ip as items
@@ -238,7 +245,7 @@ class NetworkScanner:
                 # device is still online, check if ip is not changed
                 dict_ip = addr_dict[dev.mac]
                 if dict_ip != dev.ip:
-                    print("IP on device changed from "+dev.ip+" to "+dict_ip+" !")
+                    print("IP on device changed from "+str(dev.ip)+" to "+str(dict_ip)+" !")
                     dev.ip = dict_ip
                     dev.print()
                 # delete mac ip pair, since they already exist and are still online
@@ -260,7 +267,7 @@ class NetworkScanner:
                 # TODO: refatorar código repetido
                 dict_ip = addr_dict[dev.mac]
                 if dict_ip != dev.ip:
-                    print("IP on device changed from "+dev.ip+" to "+dict_ip+" !")
+                    print("IP on device changed from "+str(dev.ip)+" to "+str(dict_ip)+" !")
                     dev.ip = dict_ip
                
                 dev.UP = True
@@ -288,6 +295,7 @@ class NetworkScanner:
         local_ips = os.popen('hostname -I').read()
         local_ips = local_ips.split(" ")
         local_ips = filter_strings(local_ips)
+        local_ips = [ipaddress.ip_address(ip) for ip in local_ips]
         return local_ips
 
     # ---------- Utility methods --------------
@@ -305,7 +313,7 @@ class NetworkScanner:
 
 
 def main():
-    ns = NetworkScanner()
+    ns = NetworkScanner("192.168.0.103/24")
     ns.periodic_scan(10)
 
 if __name__ == "__main__":
