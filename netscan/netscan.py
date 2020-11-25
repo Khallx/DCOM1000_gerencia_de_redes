@@ -39,20 +39,26 @@ def filter_string(s):
         .replace("'", "")
     return s
 
+
+
 # a single device in the network. Saves info and current time
 class NetworkDevice:
-    def __init__(self, ip, mac, UP=True, vendor=""):
+    def __init__(self, ip, mac, UP=True, vendor=None):
         self.ip = ip
         self.mac = mac 
         self.UP=UP 
-        self.vendor = self.get_api_vendor() if vendor == "" else vendor
-        #self.set_router()
+        self.vendor = "Not found" if vendor == None else vendor
+        self.set_router()
         self.first_scan_date = datetime.now()
         
     # uses cmd line to check if IP has router flag
-    def set_router(self, routers):
-        self.router = False
-        #self.router = self.ip in routers
+    def set_router(self):
+        # check if router flag is UG, else consider device as host
+        router_flag = filter_string(os.popen("route -n |" 
+                        "grep "+str(self.ip)+
+                        "| awk '{print $4}' | head -1")
+                        .read())
+        self.router = (router_flag == "UG") # if flag is UG, device is router
 
     # uses API to check vendor based on mac addr
     def get_api_vendor(self):
@@ -74,10 +80,10 @@ class NetworkDevice:
         self.print()
 
     def print(self):
-        print("Device at IP: %s\tMAC: %s" % (str(self.ip),self.mac))
-        print("Vendor: " + self.vendor)
+        print("Device at IP:"+str(self.ip)+"\tMAC:"+self.mac+
+            "\tis " + ("Router" if self.router else "Host"))
+        print("Vendor: ", self.vendor)
         print("state: ", "UP" if self.UP else "DOWN")
-        #print("Router" if self.router else "Host")
         print("First scanned at: ", self.first_scan_date.strftime("%d/%m/%Y %H:%M:%S"))
 
 
@@ -98,6 +104,7 @@ class NetworkScanner:
         except ValueError:
             print("Invalid network address. Check your internet connection")
             exit()
+
 
         # TODO: open JSON file and read already scanned devices
         self.scanned_devices = [] # list contains history of every device ever scanned
@@ -140,7 +147,6 @@ class NetworkScanner:
 
         if  not self.current_scanned_devices:
             print("No connected devices found! Check your connection")
-
 
 
     # pings every possible ip in the network based on
@@ -282,6 +288,7 @@ class NetworkScanner:
     # creates NetworkDevice object from ip and append to lists
     def add_new_device(self, ip, mac):
         self.new_online_devices_count += 1
+        # checks if mac is in vendor_dict, else pass None as vendor
         dev = NetworkDevice(ip, mac)
         self.scanned_devices.append(dev)
         self.current_scanned_devices.append(dev)
@@ -297,6 +304,25 @@ class NetworkScanner:
         local_ips = [ipaddress.ip_address(ip) for ip in local_ips]
         return local_ips
 
+    # ---------- vendor methods ------------
+    # this is only used if reading MACs from file. Not currently in use
+    def read_vendor_file(self):
+        # tab separated file
+        with open("MACS.txt") as f:
+            lines = f.readlines()
+            vendor_dict = {}
+            for line in lines:
+                mac, vendor = line.split(",", 1)
+                vendor_dict[mac] = vendor
+        return vendor_dict
+    
+
+    # get the first 6 bytes of mac address 
+    def get_mac_vendor_bytes(self, mac):
+        mac = mac.replace("-", "")  \
+            .replace(":", "")   \
+            .replace(".", "")
+        return mac[:6]
     # ---------- Utility methods --------------
     def print_scanned_devices(self):
         print("List devices from last scan:")
