@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python3
 
 # Authors:
@@ -13,6 +14,7 @@ import subprocess
 import multiprocessing
 from datetime import datetime # for scan date
 import argparse
+from jhistoric import * 
 
 # netscan scans and logs the current connected network
 # and warns of new devices or offline devices
@@ -50,7 +52,7 @@ class NetworkDevice:
         self.vendor = "Not found" if vendor == None else vendor
         self.set_router()
         self.first_scan_date = datetime.now()
-        
+
     # uses cmd line to check if IP has router flag
     def set_router(self):
         # check if router flag is UG, else consider device as host
@@ -86,6 +88,16 @@ class NetworkDevice:
         print("state: ", "UP" if self.UP else "DOWN")
         print("First scanned at: ", self.first_scan_date.strftime("%d/%m/%Y %H:%M:%S"))
 
+        self.dev = {
+            "MAC": self.mac,
+            "IP": format(self.ip),
+            "UP": self.UP,
+            "VENDOR": self.vendor,
+            "ROUTER": self.router,
+            "FSCAN_DATE": format(self.first_scan_date)
+            }
+
+        update_historic('discovery_history.json',self.dev)
 
 class NetworkScanner:
     # network_addr must include subnet mask in the x.x.x.x/m format
@@ -105,7 +117,10 @@ class NetworkScanner:
             print("Invalid network address. Check your internet connection")
             exit()
 
-
+        # if the discovery history json file, not exists, create
+        if not os.path.exists('discovery_history.json'):
+            open('discovery_history.json', 'w+').write('[\n\n]')
+        
         # TODO: open JSON file and read already scanned devices
         self.scanned_devices = [] # list contains history of every device ever scanned
         self.current_scanned_devices = [] # list of current scanned devices
