@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
+
+# Author:
+# Yuri Alves
+
+
 import json # to manipulate json file
 
 # load json file, return list 
@@ -6,13 +13,13 @@ def load_historic(file_name):
     return json.load(json_file) 
   
 # print the json file
-def print_historic_file(file):
-  print(json.dumps(file, indent=4))
+def print_historic_file(file_name):
+  print(json.dumps(file_name, indent=4))
 
 # verify if mac addres existis in historic
-def verify_if_exists(file,mac):
-  for i in range(len(file)):
-    if file[i]["MAC"] == mac:
+def verify_if_exists(file_name,mac):
+  for i in range(len(file_name)):
+    if file_name[i]["MAC"] == mac:
       return True,i
       break
     
@@ -45,8 +52,8 @@ def update_historic(file_name,data):
       
       if json_data[i]["IP"] != data["IP"]:
         json_data[i]["IP"] = data["IP"]
-      if json_data[i]["ONLINE"] != data["ONLINE"]:
-        json_data[i]["ONLINE"] = data["ONLINE"]
+      if json_data[i]["UP"] != data["UP"]:
+        json_data[i]["UP"] = data["UP"]
       if json_data[i]["VENDOR"] != data["VENDOR"]:
         json_data[i]["VENDOR"] = data["VENDOR"]
       if json_data[i]["ROUTER"] != data["ROUTER"]:
@@ -55,11 +62,10 @@ def update_historic(file_name,data):
       f.seek(0)
       f.write(json.dumps(json_data,indent=4))
       f.truncate()
-      print("Atualizados os dados, do MAC: "+data["MAC"])
+      #print("Atualizados os dados, do MAC: "+data["MAC"])
 
   else:
-    print("Impossível atualizar, o MAC: "+data["MAC"]
-    +", inexistente no histórico")
+    add_to_historic(file_name,data)
 
 # remove device information of historic   
 def remove_of_historic(file_name,data):   
@@ -77,34 +83,3 @@ def remove_of_historic(file_name,data):
   else : 
     print("Impossível remover, o MAC: "+data["MAC"]
     +", inexistente no histórico")
-
-if __name__ == "__main__":
-  
-  #set json file name
-  historic_file = 'data.json'
-   
-  #print_historic_file(load_historic(historic_file))
-  
-  new_device = {
-    "IP": "192.168.1.150",
-    "MAC": "88:34:93:79:14:10",
-    "ONLINE": "True",
-    "VENDOR": "Intelbras",
-    "ROUTER": "True",
-    "FSCAN_DATE": "21/11/2020 22:15:21"
-    }
-
-  tmp_scanned_device = {
-    "IP": "192.168.1.120",
-    "MAC": "14:2d:27:cd:52:dd",
-    "ONLINE": "True",
-    "VENDOR": "Intelbras TLW88",
-    "ROUTER": "True",
-    "FSCAN_DATE": "21/11/2020 22:15:21"
-  }
-
-  add_to_historic(historic_file,new_device)
-
-  update_historic(historic_file,tmp_scanned_device)
-
-  #remove_of_historic(historic_file,new_device)
