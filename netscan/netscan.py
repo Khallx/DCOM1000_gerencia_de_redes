@@ -14,7 +14,7 @@ import subprocess
 import multiprocessing
 from datetime import datetime # for scan date
 import argparse
-from jhistoric import * 
+import jhistoric  
 
 # netscan scans and logs the current connected network
 # and warns of new devices or offline devices
@@ -49,7 +49,7 @@ class NetworkDevice:
         self.ip = ip
         self.mac = mac 
         self.UP=UP 
-        self.vendor = "Not found" if vendor == None else vendor
+        self.vendor = self.get_api_vendor() if vendor == None else vendor
         self.set_router()
         self.first_scan_date = datetime.now()
 
@@ -88,16 +88,8 @@ class NetworkDevice:
         print("state: ", "UP" if self.UP else "DOWN")
         print("First scanned at: ", self.first_scan_date.strftime("%d/%m/%Y %H:%M:%S"))
 
-        self.dev = {
-            "MAC": self.mac,
-            "IP": format(self.ip),
-            "UP": self.UP,
-            "VENDOR": self.vendor,
-            "ROUTER": self.router,
-            "FSCAN_DATE": format(self.first_scan_date)
-            }
 
-        update_historic('discovery_history.json',self.dev)
+
 
 class NetworkScanner:
     # network_addr must include subnet mask in the x.x.x.x/m format
@@ -256,6 +248,8 @@ class NetworkScanner:
         # if not, they are added to both current_scanned_devices and scanned_devices
         self.add_devices(addr_dict)
 
+        self.update_json()
+
     # Checks addr_dict and compares with current scanned devices
     # removes devices from list if their mac is not in the addr_dict
     # removes ips from pinged list if they are found in the current scanned devices
@@ -338,6 +332,20 @@ class NetworkScanner:
             .replace(":", "")   \
             .replace(".", "")
         return mac[:6]
+
+    # ---------- JSON methods -----------------
+    def update_json(self):
+        for dev in self.scanned_devices:
+            dev_dict = {
+                "MAC": dev.mac,
+                "IP": format(dev.ip),
+                "UP": dev.UP,
+                "VENDOR": dev.vendor,
+                "ROUTER": dev.router,
+                "FSCAN_DATE": format(dev.first_scan_date)
+            }
+            jhistoric.update_historic('discovery_history.json', dev_dict)
+
     # ---------- Utility methods --------------
     def print_scanned_devices(self):
         print("List devices from last scan:")
@@ -371,13 +379,24 @@ def get_args():
             type=ipaddress.ip_network,
             required=False
             )
+    parser.add_argument("-s", dest="single_scan",
+            help="Perform network scan only once",
+            action="store_true"
+            )
 
     return parser.parse_args()
 
 def main():
+    print("NETSCAN - network discovery and management tool")
+    print("Use -h for options")
     cmd_args = get_args()
     ns = NetworkScanner(cmd_args.net_addr)
-    ns.periodic_scan(cmd_args.period)
+
+    if cmd_args.single_scan:
+        print("Perfoming scan only once.")
+        ns.single_scan()
+    else:
+        ns.periodic_scan(cmd_args.period)
 
 if __name__ == "__main__":
     main()
