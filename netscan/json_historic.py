@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python3
 
-# Author:
-# Yuri Alves
-
-
 import json # to manipulate json file
 
 # load json file, return list 
@@ -37,7 +33,7 @@ def add_to_historic(file_name,data):
         f.seek(0)
         f.write(json.dumps(json_data,indent=4))
         f.truncate()
-    print("Os dados do MAC: "+data["MAC"]+" foram adicionados")
+    #print("Os dados do MAC: "+data["MAC"]+" foram adicionados")
 
   else : 
     print("Impossível adicionar, o MAC: "+data["MAC"]
