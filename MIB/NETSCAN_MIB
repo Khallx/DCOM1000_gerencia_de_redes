@@ -1,0 +1,47 @@
+NETSCAN-MIB DEFINITIONS ::= BEGIN
+IMPORTS
+	OBJECT-TYPE,
+    IpAddress, Counter, Gauge, TimeTicks,
+    experimental
+		FROM RFC1155-SMI
+;
+
+exp OBJECT IDENTIFIER ::= { experimental 17 }
+
+exSentPackets OBJECT-TYPE
+    SYNTAX Counter
+    ACCESS read-only
+    STATUS mandatory
+    DESCRIPTION "Pacotes enviados"
+::= { exp 1 }
+
+exReceivedPackets OBJECT-TYPE
+    SYNTAX Counter
+    ACCESS read-only
+    STATUS mandatory
+    DESCRIPTION "Pacotes recebidos"
+::= { exp 2 }
+
+exIdentifyHost OBJECT-TYPE
+    SYNTAX IpAddress
+    ACCESS read-write
+    STATUS optional
+    DESCRIPTION "Endereco de MAC do Host"
+::= { exp 3 }
+
+exScanNetwork OBJECT-TYPE
+    SYNTAX TimeTicks
+    ACCESS read-write
+    STATUS mandatory
+    DESCRIPTION "Realizar Scan na rede"
+::= { exp 4 }
+
+exSetMac OBJECT-TYPE
+    SYNTAX IpAddress
+    ACCESS write-only
+    STATUS optional
+    DESCRIPTION "Atualiza IP atraves do MAC"
+::= { exp 5 }
+
+
+END
