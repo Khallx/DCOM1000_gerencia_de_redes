@@ -1,3 +1,7 @@
+-- MIB para interface com netscan
+-- autores: 
+-- Julio Costella Vicenzi
+-- Yuri Alves
 NETSCAN-MIB DEFINITIONS ::= BEGIN
 IMPORTS
 	OBJECT-TYPE,
@@ -6,49 +10,48 @@ IMPORTS
 		FROM RFC1155-SMI
 ;
 
-exp OBJECT IDENTIFIER ::= { experimental 1 }
+netscan OBJECT IDENTIFIER ::= { experimental 1 }
 
-exSentPackets OBJECT-TYPE
-    SYNTAX Counter
-    ACCESS read-only
-    STATUS mandatory
-    DESCRIPTION "Pacotes enviados."
-::= { exp 1 }
-
-exReceivedPackets OBJECT-TYPE
-    SYNTAX Counter
-    ACCESS read-only
-    STATUS mandatory
-    DESCRIPTION "Pacotes recebidos."
-::= { exp 2 }
-
-exIdentifyHost OBJECT-TYPE
+nsHostIP OBJECT-TYPE
     SYNTAX IpAddress
     ACCESS read-write
     STATUS optional
-    DESCRIPTION "Endereco de MAC do Host."
-::= { exp 3 }
+    DESCRIPTION "Endereco de IP do Host."
+::= { netscan 1 }
 
-exScanNetwork OBJECT-TYPE
+nsHostMAC OBJECT-TYPE
+    SYNTAX OCTET STRING
+    ACCESS read-write
+    STATUS optional
+    DESCRIPTION "Endereco de MAC do Host."
+::= { netscan 2 }
+
+nsNetworkMask OBJECT-TYPE
+    SYNTAX INTEGER
+    ACCESS read-write
+    STATUS optional
+    DESCRIPTION "Mascara da rede a ser procurada."
+::= { netscan 3 }
+
+nsScanNetwork OBJECT-TYPE
     SYNTAX TimeTicks
     ACCESS read-write
     STATUS mandatory
     DESCRIPTION "Realizar Scan na rede."
     DEFVAL { 1 } -- scan a cada segundo
-::= { exp 4 }
+::= { netscan 4 }
 
-exSetMac OBJECT-TYPE
+nsSetMac OBJECT-TYPE
     SYNTAX IpAddress
     ACCESS write-only
     STATUS optional
     DESCRIPTION "Atualiza IP atraves do MAC."
-::= { exp 5 }
+::= { netscan 5 }
+
 
 -- -------------------- --
 --     TABLE DEFINE     --
 -- -------------------- --
-
-interfaces OBJECT IDENTIFIER ::= { experimental 2 }
 
 ifNumber OBJECT-TYPE
     SYNTAX INTEGER
@@ -56,15 +59,15 @@ ifNumber OBJECT-TYPE
     STATUS mandatory
     DESCRIPTION "Numero de interfaces de rede (indepentende do status)
         presentes no sistema."
-::= { interfaces 1 }
+::= { netscan 6 }
 
-ifTable OBJECT-TYPE 
+deviceTable OBJECT-TYPE 
     SYNTAX SEQUENCE OF IfEntry
     ACCESS not-accessible
     STATUS mandatory
     DESCRIPTION "Lista de entradas de interface.
         O numero de entradas e dado pelo valor em ifNumber."
-::= { interfaces 2 }
+::= { netscan 7 }
 
 ifEntry OBJECT-TYPE 
     SYNTAX IfEntry
@@ -72,15 +75,15 @@ ifEntry OBJECT-TYPE
     STATUS mandatory
     DESCRIPTION "Uma interface de entrada contem info de uma interface em particular."
 INDEX { tblIndex }
-::= { ifTable 1 }
+::= { deviceTable 1 }
  
 IfEntry ::= SEQUENCE {
     tblIndex    INTEGER,
     macAddress  OCTET STRING,
-    ipAddress   NetworkAddress,
+    ipAddress   IpAddress,
     status      INTEGER,
     vendor      OCTET STRING,
-    fscanDate   TimeTicks
+    fscanDate   OCTET STRING 
 }
 
 tblIndex OBJECT-TYPE
@@ -100,7 +103,7 @@ macAddress OBJECT-TYPE
 ::= { ifEntry 2 }
 
 ipAddress OBJECT-TYPE
-    SYNTAX NetworkAddress
+    SYNTAX IpAddress
     ACCESS read-only
     STATUS mandatory
     DESCRIPTION "IP DA INTEFACE."         
@@ -121,7 +124,7 @@ vendor OBJECT-TYPE
 ::= { ifEntry 5 }
 
 fscanDate OBJECT-TYPE
-    SYNTAX TimeTicks
+    SYNTAX OCTET STRING (SIZE (0..255))
     ACCESS read-only
     STATUS mandatory
     DESCRIPTION "Data de descobreta"
