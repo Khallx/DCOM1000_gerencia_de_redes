@@ -25,6 +25,9 @@ class NetscanMIBagent:
     def __init__(self, options, network_addr=None, scan_period=60):
         # create NetworkScanner
         self.netscanner = ns.NetworkScanner(network_addr)
+        # A thread to run netscan periodically async
+        self.netscan_thread = threading.Thread(None, self.scanner_thread)
+
         # create SNMP sagent
         self.agent = self.create_agent(options)
 
@@ -85,6 +88,7 @@ class NetscanMIBagent:
     # clears device table and creates new entries based on
     # currently scanned devices
     def update_device_table(self):
+        print("Updating device table at " + str(self))
         # clear all rows in table
         self.device_table.clear()
 
@@ -107,10 +111,6 @@ class NetscanMIBagent:
 
     # runs the agent and starts network scanner thread
     def start(self):
-        # first, start a thread to run netscan periodically
-        netscan_thread = threading.Thread(None, self.scanner_thread, )
-
-        # start SNMP agent
         try:
             self.agent.start()
         except netsnmpagent.netsnmpAgentException as e:
@@ -118,8 +118,12 @@ class NetscanMIBagent:
             sys.exit(1)
 
         print("NetscanMIBagent: Serving SNMP requests, press ^C to terminate...")
+        
+        self.netscan_thread.start()
+        
         while True:     # process SNMP requests
             self.agent.check_and_process()
+
 
     def scanner_thread(self):
         while True:
@@ -131,7 +135,7 @@ class NetscanMIBagent:
                 # pensar sobre o que fazer no caso de exceções...
             else:
                 # update the MIB with new device information
-                if (self.netscanner.new_offline_devices_count > 0 or
+                if (self.netscanner.new_online_devices_count > 0 or
                     self.netscanner.new_offline_devices_count > 0):
                     self.update_device_table()
                 sleep(self.scan_period.value())
@@ -141,8 +145,10 @@ class NetscanMIBagent:
     def __enter__(self):
         return self
 
-    # shutdown SNMP agent on exit
+    # shutdown SNMP agent on exit 
     def __exit__(self, exc_type, exc_value, traceback):
+        print("Shutting down NetscanMIBagent...")
+        # handle stopping threads... maybe implement a stoppable loop
         self.agent.shutdown()
 
 

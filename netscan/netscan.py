@@ -136,7 +136,6 @@ class NetworkScanner:
                 print(str(self.new_offline_devices_count)+" devices are now offline!")
             #self.print_scanned_devices()
 
-            print("[--Scan finished--]")
             time.sleep(scan_period)
 
     # ------------ network scan methods ------------------
@@ -155,6 +154,7 @@ class NetworkScanner:
         if  not self.current_scanned_devices:
             print("No connected devices found! Check your connection")
 
+        print("[--Scan finished--]")
 
     # pings every possible ip in the network based on
     # self.max_number_of_devices
