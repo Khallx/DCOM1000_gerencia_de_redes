@@ -32,7 +32,10 @@ class NetscanMIBagent:
         self.agent = self.create_agent(options)
 
         # device table is the main MIB object with a complex initialization
-        self.device_table = self.create_table(self.agent)
+        self.device_table = self.create_table(self.agent, "deviceTable", "onlineDevices")
+
+        # history table 
+        self.history_talbe = self.create_table(self.agent, "historyTable", "totalDevices")
 
         # get network IP addr and mask as separete variables
         (network_ip, mask_number) = str(self.netscanner.network_addr).split("/")
@@ -51,6 +54,10 @@ class NetscanMIBagent:
             oidstr  =   "NETSCAN-MIB::nsScanPeriod",
             initval =   60
         )
+
+        # this variable is responsible to run netscanner indenfinetly
+        # it is set to false to terminate netscanner thread
+        self.loop = True
        
     def create_agent(self, options):
         # First, create an instance of the netsnmpAgent class. We specify the
@@ -70,9 +77,9 @@ class NetscanMIBagent:
         return agent
 
     # returns a device_table object used to update table entries
-    def create_table(self, agent):
+    def create_table(self, agent, table_name, index_name):
         return agent.Table(
-            oidstr  = "NETSCAN-MIB::deviceTable",
+            oidstr  = "NETSCAN-MIB::" + table_name,
             indexes = [ agent.OctetString() ],
             columns = [
                 (2, agent.IpAddress()),
@@ -81,32 +88,34 @@ class NetscanMIBagent:
                 (5, agent.OctetString())
             ],
             counterobj = agent.Unsigned32(
-                oidstr = "NETSCAN-MIB::ifNumber"
+                oidstr = "NETSCAN-MIB::" + index_name
             )
         )
 
     # clears device table and creates new entries based on
     # currently scanned devices
-    def update_device_table(self):
-        print("Updating device table at " + str(self))
+    def update_table(self, table, device_list):
         # clear all rows in table
-        self.device_table.clear()
+        table.clear()
 
         # add new entries
-        for device in self.netscanner.current_scanned_devices:
-            self.add_device_table_row(device)
+        for device in device_list:
+            self.add_device_table_row(table, device)
 
 
     # adds a row entry in the device_table
-    def add_device_table_row(self, network_device : ns.NetworkDevice):
-        new_row = self.device_table.addRow( [
+    def add_device_table_row(self, table, network_device : ns.NetworkDevice):
+        new_row = table.addRow( [
                 self.agent.OctetString(network_device.mac)
                 ]
             )
         new_row.setRowCell(2, self.agent.IpAddress(str(network_device.ip)))
         new_row.setRowCell(3, self.agent.Unsigned32(1 if network_device.UP else 0))
         new_row.setRowCell(4, self.agent.OctetString(network_device.vendor[:250]))
-        new_row.setRowCell(5, self.agent.OctetString(network_device.first_scan_date.strftime("%d/%m/%Y %H:%M:%S")))
+        new_row.setRowCell(5, self.agent.OctetString(
+                network_device.first_scan_date.strftime("%d/%m/%Y %H:%M:%S")
+            )
+        )
     
 
     # runs the agent and starts network scanner thread
@@ -126,7 +135,7 @@ class NetscanMIBagent:
 
 
     def scanner_thread(self):
-        while True:
+        while self.loop:
             try:
                 self.netscanner.single_scan()
             except BaseException as e:
@@ -137,18 +146,31 @@ class NetscanMIBagent:
                 # update the MIB with new device information
                 if (self.netscanner.new_online_devices_count > 0 or
                     self.netscanner.new_offline_devices_count > 0):
-                    self.update_device_table()
-                sleep(self.scan_period.value())
+                    self.update_table(self.device_table, self.netscanner.current_scanned_devices)
+                    self.update_table(self.history_talbe, self.netscanner.scanned_devices)
+            # run loop periodically
+            sleep(self.scan_period.value())
+        print("Netscanner thread finished!")
     
-    # methods for cleanup when using "with" statements
 
+    # this method ends scanner_thread
+    def stop_scanner(self):
+        self.loop = False
+        # if thread is running, wait for it to finish and join 
+        if self.netscan_thread.is_alive():
+            self.netscan_thread.join()
+
+    # methods for cleanup when using "with" statements
     def __enter__(self):
         return self
 
     # shutdown SNMP agent on exit 
     def __exit__(self, exc_type, exc_value, traceback):
+        print("Stopping netscan thread...")
+        # this finishes the scanner thread if it is running
+        self.stop_scanner()
+
         print("Shutting down NetscanMIBagent...")
-        # handle stopping threads... maybe implement a stoppable loop
         self.agent.shutdown()
 
 
