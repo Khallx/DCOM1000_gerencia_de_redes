@@ -8,8 +8,6 @@ IMPORTS
     Unsigned32, IpAddress,
     experimental
         FROM SNMPv2-SMI
-    agentxObjects
-        FROM AGENTX-MIB
 ;
 
 netscanMIB MODULE-IDENTITY
