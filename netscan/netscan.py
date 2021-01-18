@@ -82,10 +82,11 @@ class NetworkDevice:
         self.print()
 
     def print(self):
-        print("Device at IP:"+str(self.ip)+"\tMAC:"+self.mac+
-            "\tis " + ("Router" if self.router else "Host"))
+        print("Type: " + ("Router" if self.router else "Host"))
+        print("IP: " + str(self.ip))
+        print("MAC: " + self.mac)
         print("Vendor: ", self.vendor)
-        print("state: ", "UP" if self.UP else "DOWN")
+        print("State: ", "UP" if self.UP else "DOWN")
         print("First scanned at: ", self.first_scan_date.strftime("%d/%m/%Y %H:%M:%S"))
 
 

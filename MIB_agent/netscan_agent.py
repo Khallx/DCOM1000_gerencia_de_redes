@@ -111,7 +111,7 @@ class NetscanMIBagent:
             )
         new_row.setRowCell(2, self.agent.IpAddress(str(network_device.ip)))
         new_row.setRowCell(3, self.agent.Unsigned32(1 if network_device.UP else 0))
-        new_row.setRowCell(4, self.agent.OctetString(network_device.vendor[:250]))
+        new_row.setRowCell(4, self.agent.OctetString(network_device.vendor[:1024]))
         new_row.setRowCell(5, self.agent.OctetString(
                 network_device.first_scan_date.strftime("%d/%m/%Y %H:%M:%S")
             )
