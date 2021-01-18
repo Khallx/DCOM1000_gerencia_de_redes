@@ -1,0 +1,127 @@
+-- MIB para interface com netscanMIB
+-- autores: 
+-- Julio Costella Vicenzi
+-- Yuri Alves
+NETSCAN-MIB DEFINITIONS ::= BEGIN
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, 
+    Unsigned32, IpAddress,
+    experimental
+        FROM SNMPv2-SMI
+    agentxObjects
+        FROM AGENTX-MIB
+;
+
+netscanMIB MODULE-IDENTITY
+    LAST-UPDATED "202101170000Z"
+    ORGANIZATION "N/A"
+    CONTACT-INFO "N/A"
+    DESCRIPTION "MIB for netscan management"
+    REVISION "202101170000Z"
+        DESCRIPTION "MIB for netscan management"
+    ::= { agentxObjects 101 }
+
+-- -------------------------- --
+-- Network static information --
+-- -------------------------- --
+
+nsNetworkIP OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "Network IP address"
+::= { netscanMIB 1 }
+
+nsNetworkMask OBJECT-TYPE
+    SYNTAX Unsigned32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "Mascara da rede a ser procurada."
+::= { netscanMIB 3 }
+
+
+-- -------------------------- --
+--     netscan parameters     --
+-- -------------------------- --
+nsScanPeriod OBJECT-TYPE
+    SYNTAX Unsigned32
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION "Designa o periodo entre scans."
+    DEFVAL { 60 } -- scan a cada minuto
+::= { netscanMIB 4 }
+
+
+-- -------------------- --
+--     TABLE DEFINE     --
+-- -------------------- --
+
+ifNumber OBJECT-TYPE
+    SYNTAX Unsigned32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "NNumber of current online scanned devices and table entries"
+::= { netscanMIB 6 }
+
+deviceTable OBJECT-TYPE 
+    SYNTAX SEQUENCE OF IfEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION "Table with the current online devices scanned by netscan"
+::= { netscanMIB 7 }
+
+-- MAC é usado como index, visto que a enumeração
+-- dos dispostivos na tabela não é relevante
+ifEntry OBJECT-TYPE 
+    SYNTAX IfEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION "Device table entry"
+    INDEX { macAddress }
+::= { deviceTable 1 }
+ 
+IfEntry ::= SEQUENCE {
+    macAddress  OCTET STRING,
+    ipAddress   IpAddress,
+    status      Unsigned32,
+    vendor      OCTET STRING,
+    fscanDate   OCTET STRING 
+}
+
+macAddress OBJECT-TYPE
+    SYNTAX OCTET STRING (SIZE (0..17))
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "Device MAC"         
+::= { ifEntry 1 }
+
+ipAddress OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "Device IP"         
+::= { ifEntry 2 }
+
+-- 0 for DOWN and 1 for UP
+status OBJECT-TYPE
+    SYNTAX Unsigned32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "Interface status. 0 for DOWN and 1 for UP"         
+::= { ifEntry 3 }
+
+vendor OBJECT-TYPE
+    SYNTAX OCTET STRING (SIZE (0..1024))
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "Device vendor description"
+::= { ifEntry 4 }
+
+fscanDate OBJECT-TYPE
+    SYNTAX OCTET STRING (SIZE (0..1024))
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "Discovery date and hour"
+::= { ifEntry 5 }
+
+END

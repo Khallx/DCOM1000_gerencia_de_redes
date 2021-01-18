@@ -1,0 +1,7 @@
+setup.py
+ChangeLog
+python-netsnmpagent.spec.changelog
+MANIFEST
+build
+dist
+*.pyc
