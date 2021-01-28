@@ -32,6 +32,7 @@ def filter_strings(string_list):
 
     return sl
 
+
 def filter_string(s):
     s = s.replace(" ", "")  \
         .replace("\n", "")  \
@@ -40,7 +41,6 @@ def filter_string(s):
         .replace("]", "")   \
         .replace("'", "")
     return s
-
 
 
 # a single device in the network. Saves info and current time
@@ -52,6 +52,8 @@ class NetworkDevice:
         self.vendor = self.get_api_vendor() if vendor == None else vendor
         self.set_router()
         self.first_scan_date = datetime.now()
+        self.snmp_enabled = self.check_snmp_available() 
+
 
     # uses cmd line to check if IP has router flag
     def set_router(self):
@@ -61,6 +63,7 @@ class NetworkDevice:
                         "| awk '{print $4}' | head -1")
                         .read())
         self.router = (router_flag == "UG") # if flag is UG, device is router
+
 
     # uses API to check vendor based on mac addr
     def get_api_vendor(self):
@@ -76,10 +79,25 @@ class NetworkDevice:
             vendor = response.content.decode()
         return vendor
 
+
+    # checks if the device can be reache by a snmp call 
+    # this only checks for a public string
+    def check_snmp_available(self):
+        try: 
+            # this calls raises an exception on fail
+            subprocess.check_call(['snmpget','-v', '2c', '-c', 'public', str(self.ip), '1'], 
+                    stdout=subprocess.DEVNULL, 
+                    stderr=subprocess.DEVNULL)
+            return True
+        except:   
+            return False
+
+
     # prints current device state as a warning of changed state
     def report_changed_state(self):
         print("Device changed to ", "UP" if self.UP else "DOWN" , " !")
         self.print()
+
 
     def print(self):
         print("Type: " + ("Router" if self.router else "Host"))
@@ -87,9 +105,8 @@ class NetworkDevice:
         print("MAC: " + self.mac)
         print("Vendor: ", self.vendor)
         print("State: ", "UP" if self.UP else "DOWN")
+        print("SNMP: ", "Enabled" if self.snmp_enabled else "Disabled")
         print("First scanned at: ", self.first_scan_date.strftime("%d/%m/%Y %H:%M:%S"))
-
-
 
 
 class NetworkScanner:

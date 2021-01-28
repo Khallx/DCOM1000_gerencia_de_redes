@@ -85,7 +85,8 @@ class NetscanMIBagent:
                 (2, agent.IpAddress()),
                 (3, agent.Unsigned32()),
                 (4, agent.OctetString()),
-                (5, agent.OctetString())
+                (5, agent.OctetString()),
+                (6, agent.Unsigned32())
             ],
             counterobj = agent.Unsigned32(
                 oidstr = "NETSCAN-MIB::" + index_name
@@ -116,6 +117,7 @@ class NetscanMIBagent:
                 network_device.first_scan_date.strftime("%d/%m/%Y %H:%M:%S")
             )
         )
+        new_row.setRowCell(6, self.agent.Unsigned32(1 if network_device.snmp_enabled else 0))
     
 
     # runs the agent and starts network scanner thread
